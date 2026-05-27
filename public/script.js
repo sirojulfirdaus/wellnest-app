@@ -9,7 +9,12 @@ const state = {
   pendingUsers: [],
   usersSummary: null,
   logsSummary: null,
-  mediaPreviewUrl: ''
+  mediaPreviewUrl: '',
+  userLogFilter: 'all',
+  userCustomDate: '',
+  adminLogFilter: 'all',
+  adminCustomDate: '',
+  adminSearchQuery: ''
 };
 
 const app = document.getElementById('app');
@@ -115,6 +120,214 @@ function renderMetaItem(label, value) {
 
 function getFeedbacksForLog(logId) {
   return state.feedbacks.filter(item => Number(item.log_id) === Number(logId));
+}
+
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getLogDateValue(log) {
+  const value = log.date || log.created_at;
+
+  if (!value) return '';
+
+  const textValue = String(value);
+  const dateMatch = textValue.match(/^\d{4}-\d{2}-\d{2}/);
+
+  if (dateMatch) return dateMatch[0];
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  return toDateKey(parsed);
+}
+
+function parseDateKey(dateKey) {
+  if (!dateKey) return null;
+
+  const [year, month, day] = dateKey.split('-').map(Number);
+
+  if (!year || !month || !day) return null;
+
+  return new Date(year, month - 1, day);
+}
+
+function isLogWithinFilter(log, filterType, customDate) {
+  if (filterType === 'all') return true;
+
+  const logDateKey = getLogDateValue(log);
+  const today = new Date();
+  const todayKey = toDateKey(today);
+
+  if (!logDateKey) return false;
+
+  if (filterType === 'today') {
+    return logDateKey === todayKey;
+  }
+
+  if (filterType === 'last7') {
+    const logDate = parseDateKey(logDateKey);
+    const startDate = new Date(today);
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - 6);
+
+    return logDate && logDate >= startDate && logDate <= today;
+  }
+
+  if (filterType === 'month') {
+    return logDateKey.slice(0, 7) === todayKey.slice(0, 7);
+  }
+
+  if (filterType === 'custom') {
+    return customDate ? logDateKey === customDate : true;
+  }
+
+  return true;
+}
+
+function filterLogs(logs, filterType, customDate, searchQuery = '') {
+  const query = searchQuery.trim().toLowerCase();
+
+  return logs.filter((log) => {
+    const matchesDate = isLogWithinFilter(log, filterType, customDate);
+    const matchesSearch = !query
+      || String(log.user_email || '').toLowerCase().includes(query)
+      || String(log.activity_type || '').toLowerCase().includes(query);
+
+    return matchesDate && matchesSearch;
+  });
+}
+
+function renderLogFilterControls(scope, options) {
+  const filterId = `${scope}-log-filter`;
+  const customDateId = `${scope}-custom-date`;
+  const customWrapId = `${scope}-custom-date-wrap`;
+  const searchId = `${scope}-log-search`;
+  const isCustom = options.filterType === 'custom';
+
+  return `
+    <div class="filter-bar">
+      <div class="filter-controls">
+        <div class="filter-field">
+          <label for="${filterId}">Date Filter</label>
+          <select id="${filterId}" onchange="handleLogFilterChange('${scope}', 'filter', this.value)">
+            <option value="all" ${options.filterType === 'all' ? 'selected' : ''}>All logs</option>
+            <option value="today" ${options.filterType === 'today' ? 'selected' : ''}>Today</option>
+            <option value="last7" ${options.filterType === 'last7' ? 'selected' : ''}>Last 7 days</option>
+            <option value="month" ${options.filterType === 'month' ? 'selected' : ''}>This month</option>
+            <option value="custom" ${isCustom ? 'selected' : ''}>Custom date</option>
+          </select>
+        </div>
+
+        <div id="${customWrapId}" class="filter-field custom-date-field ${isCustom ? '' : 'is-hidden'}">
+          <label for="${customDateId}">Custom Date</label>
+          <input id="${customDateId}" type="date" value="${escapeHTML(options.customDate || '')}" onchange="handleLogFilterChange('${scope}', 'customDate', this.value)" />
+        </div>
+
+        ${options.includeSearch ? `
+          <div class="filter-field filter-search-field">
+            <label for="${searchId}">Search</label>
+            <input id="${searchId}" type="search" value="${escapeHTML(options.searchQuery || '')}" placeholder="Email or activity" oninput="handleLogFilterChange('${scope}', 'search', this.value)" />
+          </div>
+        ` : ''}
+      </div>
+
+      <span id="${scope}-filter-count" class="filter-count">
+        ${renderFilterCount(options.filteredCount, options.totalCount)}
+      </span>
+    </div>
+  `;
+}
+
+function renderFilterCount(filteredCount, totalCount) {
+  if (totalCount === 0) return 'No logs';
+
+  return `Showing ${filteredCount} of ${totalCount} logs`;
+}
+
+function getFilteredAdminLogs() {
+  return filterLogs(
+    state.logs,
+    state.adminLogFilter,
+    state.adminCustomDate,
+    state.adminSearchQuery
+  );
+}
+
+function getFilteredUserLogs() {
+  return filterLogs(
+    state.logs,
+    state.userLogFilter,
+    state.userCustomDate
+  );
+}
+
+function renderAdminLogList() {
+  const filteredLogs = getFilteredAdminLogs();
+
+  if (state.logs.length === 0) {
+    return renderEmptyState('No logs yet', 'User progress logs will appear here after upload.');
+  }
+
+  if (filteredLogs.length === 0) {
+    return renderEmptyState('No logs match this filter', 'Try changing the date filter or search text.');
+  }
+
+  return filteredLogs.map(renderAdminLogCard).join('');
+}
+
+function renderUserLogList() {
+  const filteredLogs = getFilteredUserLogs();
+
+  if (state.logs.length === 0) {
+    return renderEmptyState('No logs yet', 'Your uploaded activity progress will appear here.');
+  }
+
+  if (filteredLogs.length === 0) {
+    return renderEmptyState('No logs match this filter', 'Try another date range or choose All logs.');
+  }
+
+  return filteredLogs.map(renderUserLogCard).join('');
+}
+
+function handleLogFilterChange(scope, field, value) {
+  if (scope === 'admin') {
+    if (field === 'filter') state.adminLogFilter = value;
+    if (field === 'customDate') state.adminCustomDate = value;
+    if (field === 'search') state.adminSearchQuery = value;
+  }
+
+  if (scope === 'user') {
+    if (field === 'filter') state.userLogFilter = value;
+    if (field === 'customDate') state.userCustomDate = value;
+  }
+
+  refreshLogList(scope);
+}
+
+function refreshLogList(scope) {
+  const list = document.getElementById(`${scope}-log-list`);
+  const count = document.getElementById(`${scope}-filter-count`);
+  const customDateWrap = document.getElementById(`${scope}-custom-date-wrap`);
+  const filterType = scope === 'admin' ? state.adminLogFilter : state.userLogFilter;
+  const filteredLogs = scope === 'admin' ? getFilteredAdminLogs() : getFilteredUserLogs();
+
+  if (customDateWrap) {
+    customDateWrap.classList.toggle('is-hidden', filterType !== 'custom');
+  }
+
+  if (list) {
+    list.innerHTML = scope === 'admin' ? renderAdminLogList() : renderUserLogList();
+  }
+
+  if (count) {
+    count.textContent = renderFilterCount(filteredLogs.length, state.logs.length);
+  }
 }
 
 function showMessage(message, type = 'success') {
@@ -416,6 +629,7 @@ async function renderAdminDashboard() {
   ]);
 
   const logsWithMedia = state.logs.filter(log => log.media_path).length;
+  const filteredLogs = getFilteredAdminLogs();
 
   const content = `
     <section class="page-heading">
@@ -440,8 +654,17 @@ async function renderAdminDashboard() {
         </div>
       </div>
 
-      <div class="list scrollable-list admin-log-list">
-        ${state.logs.length ? state.logs.map(renderAdminLogCard).join('') : renderEmptyState('No logs yet', 'User progress logs will appear here after upload.')}
+      ${renderLogFilterControls('admin', {
+        filterType: state.adminLogFilter,
+        customDate: state.adminCustomDate,
+        includeSearch: true,
+        searchQuery: state.adminSearchQuery,
+        filteredCount: filteredLogs.length,
+        totalCount: state.logs.length
+      })}
+
+      <div id="admin-log-list" class="list scrollable-list admin-log-list">
+        ${renderAdminLogList()}
       </div>
     </section>
 
@@ -524,6 +747,8 @@ async function renderUserDashboard() {
     loadFeedbacks()
   ]);
 
+  const filteredLogs = getFilteredUserLogs();
+
   const content = `
     <section class="page-heading">
       <span class="eyebrow">User / Patient</span>
@@ -599,8 +824,15 @@ async function renderUserDashboard() {
           </div>
         </div>
 
-        <div class="list scrollable-list activity-history-list">
-          ${state.logs.length ? state.logs.map(renderUserLogCard).join('') : renderEmptyState('No logs yet', 'Your uploaded activity progress will appear here.')}
+        ${renderLogFilterControls('user', {
+          filterType: state.userLogFilter,
+          customDate: state.userCustomDate,
+          filteredCount: filteredLogs.length,
+          totalCount: state.logs.length
+        })}
+
+        <div id="user-log-list" class="list scrollable-list activity-history-list">
+          ${renderUserLogList()}
         </div>
       </section>
     </section>
