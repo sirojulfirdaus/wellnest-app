@@ -888,6 +888,27 @@ video.media-preview {
   border-color: #d7ecdd;
 }
 
+.feedback-card .feedback-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+}
+
+.feedback-card .feedback-card-header > div {
+  min-width: 0;
+}
+
+.feedback-card .date-badge {
+  justify-self: end;
+}
+
+.feedback-from {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .feedback-panel .list {
   gap: 10px;
 }
@@ -1102,6 +1123,15 @@ video.media-preview {
   .health-alert-header {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .feedback-card .feedback-card-header {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .feedback-card .date-badge {
+    justify-self: start;
   }
 
   .date-badge {

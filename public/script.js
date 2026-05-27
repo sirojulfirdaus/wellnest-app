@@ -16,7 +16,8 @@ const state = {
   userCustomDate: '',
   adminLogFilter: 'all',
   adminCustomDate: '',
-  adminSearchQuery: ''
+  adminSearchQuery: '',
+  sessionExpiredHandled: false
 };
 
 const app = document.getElementById('app');
@@ -39,6 +40,11 @@ async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
   const data = await response.json().catch(() => ({}));
 
+  if (response.status === 401 && path !== '/api/login') {
+    handleExpiredSession();
+    throw new Error('Your session has expired. Please login again.');
+  }
+
   if (!response.ok) {
     throw new Error(data.message || data.error || 'Request failed.');
   }
@@ -49,6 +55,7 @@ async function apiRequest(path, options = {}) {
 function saveSession(token, user) {
   state.token = token;
   state.user = user;
+  state.sessionExpiredHandled = false;
 
   localStorage.setItem('wellnest_token', token);
   localStorage.setItem('wellnest_user', JSON.stringify(user));
@@ -60,6 +67,15 @@ function clearSession() {
 
   localStorage.removeItem('wellnest_token');
   localStorage.removeItem('wellnest_user');
+}
+
+function handleExpiredSession() {
+  if (state.sessionExpiredHandled) return;
+
+  state.sessionExpiredHandled = true;
+  clearSession();
+  renderAuthPage('login');
+  showMessage('Your session has expired. Please login again.', 'error');
 }
 
 function escapeHTML(value) {
@@ -983,12 +999,12 @@ function renderUserFeedbackCard(item) {
       <div class="feedback-card-header">
         <div>
           <h4>${escapeHTML(item.activity_type || 'Activity Log')}</h4>
-          <p class="muted small">Log #${escapeHTML(item.log_id || '-')}</p>
+          <span class="muted small">Log #${escapeHTML(item.log_id || '-')}</span>
         </div>
-        <span class="role-badge">${formatDate(item.created_at)}</span>
+        <span class="date-badge">${formatDate(item.created_at)}</span>
       </div>
       <p class="feedback-message">${escapeHTML(item.message)}</p>
-      <p class="muted small">From: ${escapeHTML(item.admin_email || 'Admin')}</p>
+      <p class="feedback-from">From: ${escapeHTML(item.admin_email || 'Admin')}</p>
     </article>
   `;
 }
@@ -1153,7 +1169,12 @@ async function handleUpload(event) {
       body: formData
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      handleExpiredSession();
+      throw new Error('Your session has expired. Please login again.');
+    }
 
     if (!response.ok) {
       throw new Error(data.message || 'Upload failed.');
@@ -1199,6 +1220,15 @@ function handleLogout() {
   renderAuthPage('login');
 }
 
+function handleDashboardError(error) {
+  if (state.sessionExpiredHandled) return;
+
+  console.error(error);
+  clearSession();
+  renderAuthPage('login');
+  showMessage('Could not load the dashboard. Please login again.', 'error');
+}
+
 document.addEventListener('submit', async (event) => {
   if (event.target.id === 'login-form') {
     await handleLogin(event);
@@ -1214,7 +1244,7 @@ document.addEventListener('submit', async (event) => {
 });
 
 if (state.user && state.token) {
-  renderDashboard();
+  renderDashboard().catch(handleDashboardError);
 } else {
   renderAuthPage('login');
 }
