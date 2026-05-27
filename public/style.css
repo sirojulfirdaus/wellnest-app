@@ -469,6 +469,10 @@ textarea:focus {
 
 .admin-log-list {
   max-height: 760px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .upload-panel,
@@ -574,20 +578,46 @@ textarea:focus {
 }
 
 .admin-log-card {
+  display: block;
+  width: 100%;
   padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #ffffff;
 }
 
 .admin-log-card > *,
 .user-log-card > * {
+  width: 100%;
   min-width: 0;
 }
 
-.admin-log-card .log-card-header,
-.admin-log-card .log-meta-grid,
-.admin-log-card .media-section,
-.admin-log-card .note-box,
-.admin-log-card .feedback-history,
-.admin-log-card .feedback-form {
+.admin-log-card > * + * {
+  margin-top: 14px;
+}
+
+.admin-log-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 14px;
+}
+
+.admin-log-header h4 {
+  color: var(--primary);
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.admin-log-header .role-badge {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.admin-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
   width: 100%;
 }
 
@@ -627,6 +657,7 @@ textarea:focus {
 .media-section {
   display: grid;
   gap: 7px;
+  width: 100%;
 }
 
 .media-label {
@@ -639,6 +670,7 @@ textarea:focus {
 .upload-preview {
   display: grid;
   place-items: center;
+  width: 100%;
   min-height: 150px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -712,6 +744,7 @@ video.media-preview {
 }
 
 .feedback-form textarea,
+.feedback-form button,
 .feedback-form .btn {
   width: 100%;
 }
@@ -827,23 +860,41 @@ video.media-preview {
 }
 
 .health-alert-card {
+  display: grid;
   gap: 10px;
+  width: 100%;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #ffffff;
 }
 
 .health-alert-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: start;
   gap: 14px;
+  width: 100%;
 }
 
 .health-alert-header h4 {
   min-width: 0;
+  color: var(--primary);
+  margin-bottom: 0;
   overflow-wrap: anywhere;
 }
 
-.health-alert-header .role-badge {
-  flex: 0 0 auto;
+.date-badge {
+  justify-self: end;
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 850;
   white-space: nowrap;
 }
 
@@ -930,7 +981,8 @@ video.media-preview {
   .stats-grid,
   .form-row,
   .log-meta-grid,
-  .small-meta-grid {
+  .small-meta-grid,
+  .admin-meta-grid {
     grid-template-columns: 1fr;
   }
 
@@ -943,6 +995,16 @@ video.media-preview {
 
   .admin-log-card {
     padding: 15px;
+  }
+
+  .admin-log-header {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .admin-log-header .role-badge {
+    justify-self: start;
+    white-space: normal;
   }
 
   .activity-history-list {
@@ -958,7 +1020,8 @@ video.media-preview {
     gap: 8px;
   }
 
-  .health-alert-header .role-badge {
+  .date-badge {
+    justify-self: start;
     white-space: normal;
   }
 

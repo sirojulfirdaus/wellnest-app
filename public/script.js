@@ -676,8 +676,8 @@ async function renderAdminDashboard() {
 
 function renderAdminLogCard(log) {
   return `
-    <article class="item-card vertical log-card admin-log-card">
-      <div class="log-card-header">
+    <article class="admin-log-card">
+      <div class="admin-log-header">
         <div>
           <h4>${escapeHTML(log.activity_type)}</h4>
           <p class="muted">${escapeHTML(log.user_email || 'Unknown user')}</p>
@@ -685,7 +685,7 @@ function renderAdminLogCard(log) {
         <span class="role-badge">Log #${log.id}</span>
       </div>
 
-      <div class="log-meta-grid">
+      <div class="admin-meta-grid">
         ${renderMetaItem('User Email', log.user_email || 'Unknown user')}
         ${renderMetaItem('Duration', `${log.duration_minutes} minutes`)}
         ${renderMetaItem('Heart Rate', `${log.heart_rate || 'N/A'} bpm`)}
@@ -703,7 +703,7 @@ function renderAdminLogCard(log) {
 
       ${renderAdminFeedbackHistory(log.id)}
 
-      <form class="feedback-form" onsubmit="submitFeedback(event, ${log.id})">
+      <form class="feedback-form admin-feedback-form" onsubmit="submitFeedback(event, ${log.id})">
         <div>
           <label>Add Follow-up Feedback</label>
           <p class="helper-text">Multiple feedback entries can be added to the same activity log.</p>
@@ -964,10 +964,10 @@ function renderHealthAlerts() {
 
       <div class="list health-alert-list">
         ${state.healthAlerts.length ? state.healthAlerts.map(item => `
-          <article class="item-card vertical health-alert-card">
+          <article class="health-alert-card">
             <div class="health-alert-header">
               <h4>${escapeHTML(item.recalling_firm || 'Health Alert')}</h4>
-              <span class="role-badge">${formatOpenFDADate(item.report_date)}</span>
+              <span class="date-badge">${formatOpenFDADate(item.report_date)}</span>
             </div>
             <p class="health-alert-reason">${escapeHTML(item.reason_for_recall || 'No reason available.')}</p>
             <span class="status-pill">${escapeHTML(item.status || 'Unknown')}</span>
