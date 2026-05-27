@@ -443,6 +443,44 @@ textarea:focus {
   gap: 12px;
 }
 
+.scrollable-list {
+  padding-right: 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #bad7c4 transparent;
+}
+
+.scrollable-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+  background: #bad7c4;
+  border-radius: 999px;
+}
+
+.activity-history-list {
+  max-height: 680px;
+}
+
+.admin-log-list {
+  max-height: 760px;
+}
+
+.upload-panel,
+.activity-history-panel,
+.admin-review-panel {
+  align-self: start;
+}
+
+.admin-review-panel .list {
+  width: 100%;
+}
+
 .item-card,
 .feedback-card {
   display: flex;
@@ -476,6 +514,17 @@ textarea:focus {
 
 .log-card {
   gap: 14px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.admin-log-card {
+  padding: 18px;
+}
+
+.admin-log-card > *,
+.user-log-card > * {
+  min-width: 0;
 }
 
 .log-meta-grid {
@@ -526,7 +575,7 @@ textarea:focus {
 .upload-preview {
   display: grid;
   place-items: center;
-  min-height: 132px;
+  min-height: 150px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #f8fafc;
@@ -535,13 +584,25 @@ textarea:focus {
 
 .media-preview {
   width: 100%;
-  max-height: 280px;
+  max-height: 260px;
   object-fit: contain;
+  background: #ffffff;
+}
+
+img.media-preview {
+  height: auto;
+}
+
+video.media-preview {
   background: #0f172a;
 }
 
 .media-empty,
 .empty-preview {
+  width: 100%;
+  min-height: 150px;
+  display: grid;
+  place-items: center;
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -580,13 +641,21 @@ textarea:focus {
 .feedback-form {
   display: grid;
   gap: 10px;
+  width: 100%;
+  margin-top: 2px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+.feedback-form textarea,
+.feedback-form .btn {
+  width: 100%;
 }
 
 .feedback-history {
   display: grid;
   gap: 10px;
+  width: 100%;
   padding: 12px;
   border: 1px solid #d7ecdd;
   border-radius: var(--radius);
@@ -604,11 +673,20 @@ textarea:focus {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 750;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--green-soft);
 }
 
 .feedback-list {
   display: grid;
   gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbe3d2 transparent;
 }
 
 .feedback-entry {
@@ -616,6 +694,10 @@ textarea:focus {
   border-radius: var(--radius);
   background: #ffffff;
   border: 1px solid var(--border);
+}
+
+.feedback-history .empty {
+  background: #ffffff;
 }
 
 .feedback-entry p,
@@ -676,6 +758,36 @@ textarea:focus {
   color: #92400e;
 }
 
+.health-alert-list {
+  gap: 10px;
+}
+
+.health-alert-card {
+  gap: 10px;
+}
+
+.health-alert-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.health-alert-header h4 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.health-alert-header .role-badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.health-alert-reason {
+  color: #334155;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 980px) {
   .auth-page,
   .content-grid {
@@ -692,6 +804,14 @@ textarea:focus {
 
   .log-meta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .activity-history-list {
+    max-height: 620px;
+  }
+
+  .admin-log-list {
+    max-height: 720px;
   }
 
   .topbar {
@@ -741,6 +861,27 @@ textarea:focus {
   .log-card-header,
   .feedback-card-header {
     flex-direction: column;
+  }
+
+  .admin-log-card {
+    padding: 15px;
+  }
+
+  .activity-history-list {
+    max-height: 520px;
+  }
+
+  .admin-log-list {
+    max-height: 560px;
+  }
+
+  .health-alert-header {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .health-alert-header .role-badge {
+    white-space: normal;
   }
 
   .topbar {

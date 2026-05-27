@@ -431,7 +431,7 @@ async function renderAdminDashboard() {
       ${statCard('Health Alerts', state.healthAlerts.length)}
     </section>
 
-    <section class="panel">
+    <section class="panel admin-review-panel">
       <div class="panel-header">
         <div>
           <span class="section-label">Admin Review</span>
@@ -440,7 +440,7 @@ async function renderAdminDashboard() {
         </div>
       </div>
 
-      <div class="list">
+      <div class="list scrollable-list admin-log-list">
         ${state.logs.length ? state.logs.map(renderAdminLogCard).join('') : renderEmptyState('No logs yet', 'User progress logs will appear here after upload.')}
       </div>
     </section>
@@ -453,7 +453,7 @@ async function renderAdminDashboard() {
 
 function renderAdminLogCard(log) {
   return `
-    <article class="item-card vertical log-card">
+    <article class="item-card vertical log-card admin-log-card">
       <div class="log-card-header">
         <div>
           <h4>${escapeHTML(log.activity_type)}</h4>
@@ -539,7 +539,7 @@ async function renderUserDashboard() {
     </section>
 
     <section class="content-grid">
-      <section class="panel">
+      <section class="panel upload-panel">
         <div class="panel-header">
           <div>
             <span class="section-label">Upload Progress</span>
@@ -590,7 +590,7 @@ async function renderUserDashboard() {
         </form>
       </section>
 
-      <section class="panel">
+      <section class="panel activity-history-panel">
         <div class="panel-header">
           <div>
             <span class="section-label">My Logs</span>
@@ -599,7 +599,7 @@ async function renderUserDashboard() {
           </div>
         </div>
 
-        <div class="list">
+        <div class="list scrollable-list activity-history-list">
           ${state.logs.length ? state.logs.map(renderUserLogCard).join('') : renderEmptyState('No logs yet', 'Your uploaded activity progress will appear here.')}
         </div>
       </section>
@@ -632,7 +632,7 @@ async function renderUserDashboard() {
 
 function renderUserLogCard(log) {
   return `
-    <article class="item-card vertical log-card">
+    <article class="item-card vertical log-card user-log-card">
       <div class="log-card-header">
         <div>
           <h4>${escapeHTML(log.activity_type)}</h4>
@@ -730,14 +730,14 @@ function renderHealthAlerts() {
         </div>
       </div>
 
-      <div class="list">
+      <div class="list health-alert-list">
         ${state.healthAlerts.length ? state.healthAlerts.map(item => `
-          <article class="item-card vertical">
-            <div class="item-top">
+          <article class="item-card vertical health-alert-card">
+            <div class="health-alert-header">
               <h4>${escapeHTML(item.recalling_firm || 'Health Alert')}</h4>
               <span class="role-badge">${formatOpenFDADate(item.report_date)}</span>
             </div>
-            <p>${escapeHTML(item.reason_for_recall || 'No reason available.')}</p>
+            <p class="health-alert-reason">${escapeHTML(item.reason_for_recall || 'No reason available.')}</p>
             <span class="status-pill">${escapeHTML(item.status || 'Unknown')}</span>
           </article>
         `).join('') : renderEmptyState('No health alerts available', 'OpenFDA food recall data will appear here when available.')}
