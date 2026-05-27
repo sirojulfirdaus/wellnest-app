@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.local
+.env.*.local
+
+# uploads / user-generated files
+uploads/*
+!uploads/.gitkeep
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# backups / archives
+_archive/
+*-old-*.js
+*-backup*
+wellnest-app-backup*/
+
+# temporary files
+tmp/
+.temp/
