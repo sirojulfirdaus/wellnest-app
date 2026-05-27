@@ -120,6 +120,147 @@ const upload = multer({
   }
 });
 
+const curationRules = {
+  'Strength / Gym': {
+    keywords: ['gym', 'strength', 'workout', 'weight', 'upper', 'lower', 'push', 'pull', 'lifting', 'muscle'],
+    summary: 'Your recent activity logs show a tendency toward gym or strength-based workouts.',
+    recommendations: [
+      {
+        title: 'Resistance Band',
+        reason: 'Useful for warm-up, mobility, and accessory strength exercises.'
+      },
+      {
+        title: 'Foam Roller',
+        reason: 'Helps with recovery after strength training sessions.'
+      },
+      {
+        title: 'Protein Shaker',
+        reason: 'Keeps post-workout nutrition simple and consistent.'
+      },
+      {
+        title: 'Recovery Reminder',
+        reason: 'Plan rest days so strength progress does not turn into overtraining.'
+      }
+    ]
+  },
+  'Cardio / Running': {
+    keywords: ['run', 'running', 'jog', 'jogging', 'cardio', 'cycling', 'bike', 'swim', 'swimming'],
+    summary: 'Your recent activity logs show a tendency toward cardio or endurance activities.',
+    recommendations: [
+      {
+        title: 'Hydration Bottle',
+        reason: 'Supports steady hydration before and after cardio sessions.'
+      },
+      {
+        title: 'Running Socks',
+        reason: 'Helps keep longer runs or walks more comfortable.'
+      },
+      {
+        title: 'Sport Towel',
+        reason: 'Useful for outdoor runs, gym cardio, and post-workout cooldowns.'
+      },
+      {
+        title: 'Pace Tracking Habit',
+        reason: 'Record pace or effort level to notice endurance progress over time.'
+      }
+    ]
+  },
+  'Mobility / Recovery': {
+    keywords: ['yoga', 'stretch', 'stretching', 'mobility', 'recovery', 'pilates', 'meditation'],
+    summary: 'Your recent activity logs show a tendency toward mobility, recovery, or mindful movement.',
+    recommendations: [
+      {
+        title: 'Yoga Mat',
+        reason: 'Provides a comfortable base for stretching, yoga, and floor exercises.'
+      },
+      {
+        title: 'Stretching Strap',
+        reason: 'Supports controlled stretching and mobility work.'
+      },
+      {
+        title: 'Breathing Routine',
+        reason: 'A short breathing routine can make recovery sessions more focused.'
+      },
+      {
+        title: 'Sleep Wind-down Reminder',
+        reason: 'A calmer evening routine can support recovery and consistency.'
+      }
+    ]
+  },
+  'General Wellness': {
+    keywords: [],
+    summary: 'Your recent activity pattern is still general, so start with simple wellness support.',
+    recommendations: [
+      {
+        title: 'Water Bottle',
+        reason: 'Makes daily hydration easier to remember.'
+      },
+      {
+        title: 'Daily Walk Reminder',
+        reason: 'A short walk helps build a simple baseline activity habit.'
+      },
+      {
+        title: 'Basic Workout Mat',
+        reason: 'Useful for light exercise, stretching, and beginner home workouts.'
+      },
+      {
+        title: 'Sleep Schedule Check',
+        reason: 'Consistent sleep timing supports energy, recovery, and mood.'
+      }
+    ]
+  }
+};
+
+function buildWellnessCuration(logs) {
+  const scores = {
+    'Strength / Gym': 0,
+    'Cardio / Running': 0,
+    'Mobility / Recovery': 0
+  };
+  const matchedByPattern = {
+    'Strength / Gym': new Set(),
+    'Cardio / Running': new Set(),
+    'Mobility / Recovery': new Set()
+  };
+
+  logs.forEach((log) => {
+    const text = `${log.activity_type || ''} ${log.notes || ''}`.toLowerCase();
+
+    Object.keys(scores).forEach((pattern) => {
+      curationRules[pattern].keywords.forEach((keyword) => {
+        if (text.includes(keyword)) {
+          scores[pattern] += 1;
+          matchedByPattern[pattern].add(keyword);
+        }
+      });
+    });
+  });
+
+  let pattern = 'General Wellness';
+  let highestScore = 0;
+
+  Object.keys(scores).forEach((candidate) => {
+    if (scores[candidate] > highestScore) {
+      highestScore = scores[candidate];
+      pattern = candidate;
+    }
+  });
+
+  const rule = curationRules[pattern];
+
+  return {
+    pattern,
+    summary: rule.summary,
+    evidence: {
+      totalLogsAnalyzed: logs.length,
+      matchedKeywords: pattern === 'General Wellness'
+        ? []
+        : Array.from(matchedByPattern[pattern])
+    },
+    recommendations: rule.recommendations
+  };
+}
+
 app.get('/api/status', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT 1 AS db_ok');
@@ -427,6 +568,29 @@ app.get('/api/logs/summary', verifyToken, authorizeRole('user', 'admin', 'supera
   } catch (error) {
     console.error(error);
     sendError(res, 500, 'Failed to calculate health summary.');
+  }
+});
+
+app.get('/api/curation', verifyToken, authorizeRole('user', 'admin', 'superadmin'), async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `
+      SELECT activity_type, notes, date, created_at
+      FROM health_logs
+      WHERE user_id = ?
+      ORDER BY created_at DESC, date DESC
+      LIMIT 10
+      `,
+      [req.user.id]
+    );
+
+    res.json({
+      success: true,
+      data: buildWellnessCuration(rows)
+    });
+  } catch (error) {
+    console.error(error);
+    sendError(res, 500, 'Failed to build wellness curation.');
   }
 });
 

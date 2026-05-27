@@ -9,6 +9,8 @@ const state = {
   pendingUsers: [],
   usersSummary: null,
   logsSummary: null,
+  curation: null,
+  curationError: '',
   mediaPreviewUrl: '',
   userLogFilter: 'all',
   userCustomDate: '',
@@ -549,6 +551,20 @@ async function loadFeedbacks() {
   state.feedbacks = feedbacks.data || [];
 }
 
+async function loadCuration() {
+  try {
+    const curation = await apiRequest('/api/curation', {
+      headers: apiHeaders(false)
+    });
+
+    state.curation = curation.data || null;
+    state.curationError = '';
+  } catch {
+    state.curation = null;
+    state.curationError = 'Wellness curation is temporarily unavailable.';
+  }
+}
+
 async function renderDashboard() {
   if (!state.user) {
     renderAuthPage('login');
@@ -749,12 +765,72 @@ function renderAdminFeedbackHistory(logId) {
   `;
 }
 
+function renderCurationSection() {
+  if (state.curationError) {
+    return `
+      <section class="panel curation-panel">
+        <div class="panel-header">
+          <div>
+            <span class="section-label">Wellness Curation</span>
+            <h3>Wellness Curation</h3>
+            <p>Personalized lifestyle support based on your recent activity pattern.</p>
+          </div>
+        </div>
+        ${renderEmptyState('Curation unavailable', state.curationError)}
+      </section>
+    `;
+  }
+
+  const curation = state.curation || {
+    pattern: 'General Wellness',
+    summary: 'Your recent activity pattern is still general, so start with simple wellness support.',
+    evidence: {
+      totalLogsAnalyzed: 0,
+      matchedKeywords: []
+    },
+    recommendations: []
+  };
+  const evidence = curation.evidence || {};
+  const keywords = evidence.matchedKeywords || [];
+  const keywordText = keywords.length ? keywords.join(', ') : 'no specific keywords yet';
+  const recommendations = curation.recommendations || [];
+
+  return `
+    <section class="panel curation-panel">
+      <div class="panel-header curation-header">
+        <div>
+          <span class="section-label">Wellness Curation</span>
+          <h3>Wellness Curation</h3>
+          <p>Personalized lifestyle support based on your recent activity pattern.</p>
+        </div>
+        <span class="pattern-badge">${escapeHTML(curation.pattern || 'General Wellness')}</span>
+      </div>
+
+      <p class="curation-summary">${escapeHTML(curation.summary || '')}</p>
+
+      <div class="recommendation-grid">
+        ${recommendations.map(item => `
+          <article class="recommendation-card">
+            <h4>${escapeHTML(item.title)}</h4>
+            <p>${escapeHTML(item.reason)}</p>
+          </article>
+        `).join('')}
+      </div>
+
+      <p class="evidence-text">
+        Based on ${escapeHTML(evidence.totalLogsAnalyzed ?? 0)} recent logs and keywords: ${escapeHTML(keywordText)}
+      </p>
+    </section>
+  `;
+}
+
 async function renderUserDashboard() {
   await Promise.all([
     loadCommonData(),
     loadLogs(),
     loadLogsSummary(),
-    loadFeedbacks()
+    loadFeedbacks(),
+    loadCuration()
   ]);
 
   const filteredLogs = getFilteredUserLogs();
@@ -772,6 +848,8 @@ async function renderUserDashboard() {
       ${statCard('Avg Heart Rate', state.logsSummary?.avgHeartRate ?? 'N/A')}
       ${statCard('Health Alerts', state.healthAlerts.length)}
     </section>
+
+    ${renderCurationSection()}
 
     <section class="content-grid">
       <section class="panel upload-panel">
