@@ -1,0 +1,44 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: wellnest-db-docker
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root_docker_password
+      MARIADB_DATABASE: wellnest_db
+      MARIADB_USER: wellnest_user
+      MARIADB_PASSWORD: wellnest_docker_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - wellnest_db_data:/var/lib/mysql
+      - ./docker-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-proot_docker_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    container_name: wellnest-app-docker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_USER: wellnest_user
+      DB_PASSWORD: wellnest_docker_password
+      DB_NAME: wellnest_db
+      JWT_SECRET: wellnest_docker_secret_key
+      JWT_EXPIRES_IN: 1d
+    ports:
+      - "3010:3000"
+    volumes:
+      - wellnest_uploads:/app/uploads
+
+volumes:
+  wellnest_db_data:
+  wellnest_uploads:
