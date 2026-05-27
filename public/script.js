@@ -8,7 +8,8 @@ const state = {
   healthAlerts: [],
   pendingUsers: [],
   usersSummary: null,
-  logsSummary: null
+  logsSummary: null,
+  mediaPreviewUrl: ''
 };
 
 const app = document.getElementById('app');
@@ -84,6 +85,38 @@ function formatOpenFDADate(value) {
   return formatDate(formatted);
 }
 
+function formatRoleLabel(role) {
+  const labels = {
+    superadmin: 'Superadmin',
+    admin: 'Admin / Doctor / Trainer',
+    user: 'User / Patient'
+  };
+
+  return labels[role] || role || 'Guest';
+}
+
+function renderEmptyState(title, detail = '') {
+  return `
+    <div class="empty">
+      <strong>${escapeHTML(title)}</strong>
+      ${detail ? `<p>${escapeHTML(detail)}</p>` : ''}
+    </div>
+  `;
+}
+
+function renderMetaItem(label, value) {
+  return `
+    <div class="meta-item">
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value)}</strong>
+    </div>
+  `;
+}
+
+function getFeedbacksForLog(logId) {
+  return state.feedbacks.filter(item => Number(item.log_id) === Number(logId));
+}
+
 function showMessage(message, type = 'success') {
   const box = document.getElementById('message-box');
 
@@ -102,21 +135,21 @@ function showMessage(message, type = 'success') {
 }
 
 function renderMedia(mediaPath) {
-  if (!mediaPath) return '<span class="muted">No media uploaded</span>';
+  if (!mediaPath) return '<div class="media-empty">No media uploaded</div>';
 
   const url = `${API_BASE_URL}${mediaPath}`;
   const lower = mediaPath.toLowerCase();
 
   if (lower.endsWith('.mp4') || lower.endsWith('.webm')) {
     return `
-      <video class="media-preview" controls>
+      <video class="media-preview" controls preload="metadata">
         <source src="${url}">
         Your browser does not support video preview.
       </video>
     `;
   }
 
-  return `<img class="media-preview" src="${url}" alt="Uploaded progress media" />`;
+  return `<img class="media-preview" src="${url}" alt="Uploaded progress media" loading="lazy" />`;
 }
 
 function renderAuthPage(mode = 'login') {
@@ -126,7 +159,7 @@ function renderAuthPage(mode = 'login') {
     <main class="auth-page">
       <section class="auth-hero">
         <div class="brand-row">
-          <div class="brand-icon">✦</div>
+          <div class="brand-icon">WN</div>
           <div>
             <h1>WellNest</h1>
             <p>Health & Wellbeing Platform</p>
@@ -219,12 +252,12 @@ function renderRegisterForm() {
 }
 
 function renderDashboardShell(content) {
-  const roleLabel = state.user?.role || 'guest';
+  const roleLabel = formatRoleLabel(state.user?.role);
 
   app.innerHTML = `
     <header class="topbar">
       <div class="brand-row small-brand">
-        <div class="brand-icon">✦</div>
+        <div class="brand-icon">WN</div>
         <div>
           <h1>WellNest</h1>
           <p>Health & Wellbeing Platform</p>
@@ -249,15 +282,15 @@ function statCard(label, value) {
   return `
     <div class="stat-card">
       <span>${label}</span>
-      <strong>${value ?? '—'}</strong>
+      <strong>${value ?? '-'}</strong>
     </div>
   `;
 }
 
 function getDashboardTitle() {
   if (state.user?.role === 'superadmin') return 'Superadmin Dashboard';
-  if (state.user?.role === 'admin') return 'Admin Review Dashboard';
-  return 'User Progress Dashboard';
+  if (state.user?.role === 'admin') return 'Admin / Doctor / Trainer Dashboard';
+  return 'User / Patient Dashboard';
 }
 
 async function loadCommonData() {
@@ -340,9 +373,9 @@ async function renderSuperadminDashboard() {
 
     <section class="stats-grid">
       ${statCard('Pending Accounts', state.usersSummary.pendingUsers ?? state.pendingUsers.length)}
-      ${statCard('Total Users', state.usersSummary.totalUsers ?? '—')}
-      ${statCard('Admins', state.usersSummary.totalAdmins ?? '—')}
-      ${statCard('Regular Users', state.usersSummary.totalRegularUsers ?? '—')}
+      ${statCard('Total Users', state.usersSummary.totalUsers ?? '-')}
+      ${statCard('Admins', state.usersSummary.totalAdmins ?? '-')}
+      ${statCard('Regular Users', state.usersSummary.totalRegularUsers ?? '-')}
     </section>
 
     <section class="panel">
@@ -359,12 +392,12 @@ async function renderSuperadminDashboard() {
           <article class="item-card">
             <div>
               <h4>${escapeHTML(user.email)}</h4>
-              <p>Role: <strong>${escapeHTML(user.role)}</strong></p>
+              <p>Role: <strong>${escapeHTML(formatRoleLabel(user.role))}</strong></p>
               <p class="muted">Registered: ${formatDate(user.created_at)}</p>
             </div>
             <button class="btn primary small-btn" onclick="approveUser(${user.id})">Approve</button>
           </article>
-        `).join('') : '<p class="empty">No pending accounts.</p>'}
+        `).join('') : renderEmptyState('No pending accounts', 'New registrations waiting for approval will appear here.')}
       </div>
     </section>
 
@@ -386,9 +419,9 @@ async function renderAdminDashboard() {
 
   const content = `
     <section class="page-heading">
-      <span class="eyebrow">Producer Role</span>
+      <span class="eyebrow">Admin / Doctor / Trainer</span>
       <h2>${getDashboardTitle()}</h2>
-      <p>Review user progress uploads and provide health or fitness feedback.</p>
+      <p>Review user progress uploads, check media, and add follow-up feedback.</p>
     </section>
 
     <section class="stats-grid">
@@ -408,7 +441,7 @@ async function renderAdminDashboard() {
       </div>
 
       <div class="list">
-        ${state.logs.length ? state.logs.map(renderAdminLogCard).join('') : '<p class="empty">No user logs available.</p>'}
+        ${state.logs.length ? state.logs.map(renderAdminLogCard).join('') : renderEmptyState('No logs yet', 'User progress logs will appear here after upload.')}
       </div>
     </section>
 
@@ -420,27 +453,66 @@ async function renderAdminDashboard() {
 
 function renderAdminLogCard(log) {
   return `
-    <article class="item-card vertical">
-      <div class="item-top">
+    <article class="item-card vertical log-card">
+      <div class="log-card-header">
         <div>
           <h4>${escapeHTML(log.activity_type)}</h4>
-          <p class="muted">User: ${escapeHTML(log.user_email || 'Unknown user')}</p>
-          <p>${escapeHTML(log.duration_minutes)} minutes · Heart rate: ${escapeHTML(log.heart_rate || 'N/A')} bpm · ${formatDate(log.date || log.created_at)}</p>
+          <p class="muted">${escapeHTML(log.user_email || 'Unknown user')}</p>
         </div>
         <span class="role-badge">Log #${log.id}</span>
       </div>
 
-      <div class="media-box">
-        ${renderMedia(log.media_path)}
+      <div class="log-meta-grid">
+        ${renderMetaItem('User Email', log.user_email || 'Unknown user')}
+        ${renderMetaItem('Duration', `${log.duration_minutes} minutes`)}
+        ${renderMetaItem('Heart Rate', `${log.heart_rate || 'N/A'} bpm`)}
+        ${renderMetaItem('Date', formatDate(log.date || log.created_at))}
+      </div>
+
+      <div class="media-section">
+        <span class="media-label">Media Preview</span>
+        <div class="media-box">
+          ${renderMedia(log.media_path)}
+        </div>
       </div>
 
       ${log.notes ? `<p class="note-box">${escapeHTML(log.notes)}</p>` : ''}
 
+      ${renderAdminFeedbackHistory(log.id)}
+
       <form class="feedback-form" onsubmit="submitFeedback(event, ${log.id})">
-        <textarea placeholder="Write feedback for this user..." required></textarea>
-        <button class="btn primary small-btn" type="submit">Submit Feedback</button>
+        <div>
+          <label>Add Follow-up Feedback</label>
+          <p class="helper-text">Multiple feedback entries can be added to the same activity log.</p>
+        </div>
+        <textarea placeholder="Write a follow-up note for this user..." required></textarea>
+        <button class="btn primary small-btn" type="submit">Add Feedback</button>
       </form>
     </article>
+  `;
+}
+
+function renderAdminFeedbackHistory(logId) {
+  const feedbackItems = getFeedbacksForLog(logId);
+
+  return `
+    <div class="feedback-history compact">
+      <div class="history-heading">
+        <strong>Feedback History</strong>
+        <span>${feedbackItems.length} ${feedbackItems.length === 1 ? 'entry' : 'entries'}</span>
+      </div>
+
+      ${feedbackItems.length ? `
+        <div class="feedback-list">
+          ${feedbackItems.map(item => `
+            <div class="feedback-entry">
+              <p>${escapeHTML(item.message)}</p>
+              <span class="muted small">By ${escapeHTML(item.admin_email || 'Admin')} - ${formatDate(item.created_at)}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p class="empty compact-empty">No follow-up feedback yet.</p>'}
+    </div>
   `;
 }
 
@@ -454,9 +526,9 @@ async function renderUserDashboard() {
 
   const content = `
     <section class="page-heading">
-      <span class="eyebrow">Consumer Role</span>
+      <span class="eyebrow">User / Patient</span>
       <h2>${getDashboardTitle()}</h2>
-      <p>Upload your physical progress and view feedback from Admin.</p>
+      <p>Upload physical progress and review feedback history from Admin or Trainer.</p>
     </section>
 
     <section class="stats-grid">
@@ -476,7 +548,7 @@ async function renderUserDashboard() {
           </div>
         </div>
 
-        <form id="upload-form" class="form">
+        <form id="upload-form" class="form upload-form">
           <div>
             <label>Activity Type</label>
             <input id="activity_type" type="text" placeholder="Gym, Running, Home Workout" required />
@@ -501,7 +573,12 @@ async function renderUserDashboard() {
 
           <div>
             <label>Progress Media</label>
-            <input id="media" type="file" accept="image/*,video/mp4,video/webm" />
+            <input id="media" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" />
+            <p class="helper-text">Supported files: JPG, PNG, WEBP, GIF, MP4, WEBM.</p>
+          </div>
+
+          <div id="selected-media-preview" class="upload-preview empty-preview">
+            <span>No media selected</span>
           </div>
 
           <div>
@@ -523,30 +600,22 @@ async function renderUserDashboard() {
         </div>
 
         <div class="list">
-          ${state.logs.length ? state.logs.map(renderUserLogCard).join('') : '<p class="empty">No progress logs yet.</p>'}
+          ${state.logs.length ? state.logs.map(renderUserLogCard).join('') : renderEmptyState('No logs yet', 'Your uploaded activity progress will appear here.')}
         </div>
       </section>
     </section>
 
-    <section class="panel">
+    <section class="panel feedback-panel">
       <div class="panel-header">
         <div>
-          <span class="section-label">Admin Feedback</span>
-          <h3>Feedback for You</h3>
-          <p>Evaluation submitted by Admin or Trainer.</p>
+          <span class="section-label">Feedback History</span>
+          <h3>Feedback History</h3>
+          <p>Follow-up feedback submitted by Admin or Trainer.</p>
         </div>
       </div>
 
       <div class="list">
-        ${state.feedbacks.length ? state.feedbacks.map(item => `
-          <article class="item-card">
-            <div>
-              <h4>${escapeHTML(item.activity_type)}</h4>
-              <p>${escapeHTML(item.message)}</p>
-              <p class="muted">From: ${escapeHTML(item.admin_email || 'Admin')} · ${formatDate(item.created_at)}</p>
-            </div>
-          </article>
-        `).join('') : '<p class="empty">No feedback yet.</p>'}
+        ${state.feedbacks.length ? state.feedbacks.map(renderUserFeedbackCard).join('') : renderEmptyState('No feedback yet', 'Feedback will appear here after an Admin reviews your logs.')}
       </div>
     </section>
 
@@ -557,21 +626,30 @@ async function renderUserDashboard() {
 
   const dateInput = document.getElementById('date');
   if (dateInput) dateInput.valueAsDate = new Date();
+
+  setupUploadPreview();
 }
 
 function renderUserLogCard(log) {
   return `
-    <article class="item-card vertical">
-      <div class="item-top">
+    <article class="item-card vertical log-card">
+      <div class="log-card-header">
         <div>
           <h4>${escapeHTML(log.activity_type)}</h4>
-          <p>${escapeHTML(log.duration_minutes)} minutes · Heart rate: ${escapeHTML(log.heart_rate || 'N/A')} bpm</p>
           <p class="muted">${formatDate(log.date || log.created_at)}</p>
         </div>
       </div>
 
-      <div class="media-box">
-        ${renderMedia(log.media_path)}
+      <div class="log-meta-grid small-meta-grid">
+        ${renderMetaItem('Duration', `${log.duration_minutes} minutes`)}
+        ${renderMetaItem('Heart Rate', `${log.heart_rate || 'N/A'} bpm`)}
+      </div>
+
+      <div class="media-section">
+        <span class="media-label">Media Preview</span>
+        <div class="media-box">
+          ${renderMedia(log.media_path)}
+        </div>
       </div>
 
       ${log.notes ? `<p class="note-box">${escapeHTML(log.notes)}</p>` : ''}
@@ -579,9 +657,71 @@ function renderUserLogCard(log) {
   `;
 }
 
+function renderUserFeedbackCard(item) {
+  return `
+    <article class="feedback-card">
+      <div class="feedback-card-header">
+        <div>
+          <h4>${escapeHTML(item.activity_type || 'Activity Log')}</h4>
+          <p class="muted small">Log #${escapeHTML(item.log_id || '-')}</p>
+        </div>
+        <span class="role-badge">${formatDate(item.created_at)}</span>
+      </div>
+      <p class="feedback-message">${escapeHTML(item.message)}</p>
+      <p class="muted small">From: ${escapeHTML(item.admin_email || 'Admin')}</p>
+    </article>
+  `;
+}
+
+function setupUploadPreview() {
+  const mediaInput = document.getElementById('media');
+  const preview = document.getElementById('selected-media-preview');
+
+  if (!mediaInput || !preview) return;
+
+  mediaInput.addEventListener('change', () => {
+    if (state.mediaPreviewUrl) {
+      URL.revokeObjectURL(state.mediaPreviewUrl);
+      state.mediaPreviewUrl = '';
+    }
+
+    const file = mediaInput.files[0];
+
+    if (!file) {
+      preview.className = 'upload-preview empty-preview';
+      preview.innerHTML = '<span>No media selected</span>';
+      return;
+    }
+
+    state.mediaPreviewUrl = URL.createObjectURL(file);
+    const safeName = escapeHTML(file.name);
+
+    if (file.type.startsWith('video/')) {
+      preview.className = 'upload-preview';
+      preview.innerHTML = `
+        <video controls preload="metadata" src="${state.mediaPreviewUrl}"></video>
+        <span>${safeName}</span>
+      `;
+      return;
+    }
+
+    if (file.type.startsWith('image/')) {
+      preview.className = 'upload-preview';
+      preview.innerHTML = `
+        <img src="${state.mediaPreviewUrl}" alt="Selected media preview" />
+        <span>${safeName}</span>
+      `;
+      return;
+    }
+
+    preview.className = 'upload-preview empty-preview';
+    preview.innerHTML = `<span>${safeName}</span>`;
+  });
+}
+
 function renderHealthAlerts() {
   return `
-    <section class="panel">
+    <section class="panel health-panel">
       <div class="panel-header">
         <div>
           <span class="section-label">Public API</span>
@@ -600,7 +740,7 @@ function renderHealthAlerts() {
             <p>${escapeHTML(item.reason_for_recall || 'No reason available.')}</p>
             <span class="status-pill">${escapeHTML(item.status || 'Unknown')}</span>
           </article>
-        `).join('') : '<p class="empty">No public health alerts available.</p>'}
+        `).join('') : renderEmptyState('No health alerts available', 'OpenFDA food recall data will appear here when available.')}
       </div>
     </section>
   `;
@@ -700,6 +840,10 @@ async function handleUpload(event) {
     }
 
     showMessage('Progress uploaded successfully.', 'success');
+    if (state.mediaPreviewUrl) {
+      URL.revokeObjectURL(state.mediaPreviewUrl);
+      state.mediaPreviewUrl = '';
+    }
     await renderUserDashboard();
   } catch (error) {
     showMessage(error.message, 'error');
