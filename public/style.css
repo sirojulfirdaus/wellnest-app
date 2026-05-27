@@ -267,6 +267,8 @@ textarea:focus {
 }
 
 .demo-box {
+  display: grid;
+  gap: 8px;
   padding: 13px;
   border-radius: var(--radius);
   background: var(--surface);
@@ -276,6 +278,23 @@ textarea:focus {
 
 .demo-box strong {
   color: var(--primary);
+}
+
+.demo-account {
+  display: grid;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.demo-account span {
+  color: var(--green);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.demo-account p {
+  overflow-wrap: anywhere;
 }
 
 .message-box {

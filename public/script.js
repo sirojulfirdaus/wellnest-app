@@ -427,8 +427,18 @@ function renderLoginForm() {
 
       <div class="demo-box">
         <strong>Demo Accounts</strong>
-        <p>Superadmin: superadmin@wellnest.local / superadmin123</p>
-        <p>Admin: admin@wellnest.local / admin123</p>
+        <div class="demo-account">
+          <span>Superadmin Approval</span>
+          <p>superadmin@wellnest.local / superadmin123</p>
+        </div>
+        <div class="demo-account">
+          <span>Admin / Doctor / Trainer</span>
+          <p>admin@wellnest.local / admin123</p>
+        </div>
+        <div class="demo-account">
+          <span>User / Patient</span>
+          <p>userdemo@wellnest.local / user123</p>
+        </div>
       </div>
     </form>
   `;
