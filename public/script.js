@@ -995,16 +995,16 @@ function renderUserLogCard(log) {
 
 function renderUserFeedbackCard(item) {
   return `
-    <article class="feedback-card">
-      <div class="feedback-card-header">
-        <div>
+    <article class="user-feedback-card">
+      <div class="user-feedback-header">
+        <div class="user-feedback-title-block">
           <h4>${escapeHTML(item.activity_type || 'Activity Log')}</h4>
-          <span class="muted small">Log #${escapeHTML(item.log_id || '-')}</span>
+          <p class="muted small">Log #${escapeHTML(item.log_id || '-')}</p>
         </div>
-        <span class="date-badge">${formatDate(item.created_at)}</span>
+        <span class="date-badge user-feedback-date">${formatDate(item.created_at)}</span>
       </div>
-      <p class="feedback-message">${escapeHTML(item.message)}</p>
-      <p class="feedback-from">From: ${escapeHTML(item.admin_email || 'Admin')}</p>
+      <p class="user-feedback-message">${escapeHTML(item.message)}</p>
+      <p class="user-feedback-from">From: ${escapeHTML(item.admin_email || 'Admin')}</p>
     </article>
   `;
 }
